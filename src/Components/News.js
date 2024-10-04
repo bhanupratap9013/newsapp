@@ -2,6 +2,8 @@ import React, { Component } from 'react';
 import NewsItem from './NewsItem';
 import Spinner from './Spinner';
 import PropTypes from "prop-types";
+import InfiniteScroll from "react-infinite-scroll-component";
+import LoadingBar from 'react-top-loading-bar';
 
 export default class News extends Component {
     constructor() {
@@ -9,8 +11,9 @@ export default class News extends Component {
         this.state = {
             articles: [],
             loading: false,
-            page: 2,
-            totalResults: 0 // New state to track total articles
+            page: 1,  // Start from page 1
+            totalResults: 0,
+            progress: 0
         };
     }
 
@@ -26,47 +29,44 @@ export default class News extends Component {
       category: PropTypes.string
     };
 
+    setProgress = (progress) => {
+      this.setState({ progress });
+    };  
+
     fetchData = async () => {
         this.setState({ loading: true });
-        document.title = this.props.category.charAt(0).toUpperCase()+this.props.category.slice(1) + " HeadLines";
+        document.title = this.props.category.charAt(0).toUpperCase() + this.props.category.slice(1) + " Headlines";
         try {
+            this.setProgress(30);
             const response = await fetch(`https://newsapi.org/v2/top-headlines?country=${this.props.country}&category=${this.props.category}&pageSize=${this.props.pageSize}&page=${this.state.page}&apiKey=ceb31121f2bb48179582393dcf445475`);
             const jsonData = await response.json();
-            
-            // Check if articles exist in the response
+            this.setProgress(50);
+            // Append new articles to the existing ones
             if (jsonData.articles) {
                 this.setState({ 
-                    articles: jsonData.articles, 
+                    articles: this.state.articles.concat(jsonData.articles), 
                     totalResults: jsonData.totalResults,
                     loading: false 
                 });
+                this.setProgress(100);
             } else {
                 this.setState({ 
                     articles: [], 
                     totalResults: 0,
                     loading: false 
                 });
+                this.setProgress(100);
             }
         } catch (error) {
             console.error("Error fetching data:", error);
             this.setState({ loading: false });
+            this.setProgress(100);
         }
     };
 
-    previousPage = () => {
-        if (this.state.page > 1) {
-            this.setState((prevState) => ({
-                page: prevState.page - 1,
-                loading: false
-                
-            }), this.fetchData);
-        }
-    };
-
-    nextPage = () => {
+    fetchNextUsers = () => {
         this.setState((prevState) => ({
-            page: prevState.page + 1,
-            loading: false
+            page: prevState.page + 1
         }), this.fetchData);
     };
 
@@ -75,24 +75,24 @@ export default class News extends Component {
     }
 
     render() {
-        const defaultImageUrl = "https://via.placeholder.com/150"; // Default image URL
-        const totalPages = Math.ceil(this.state.totalResults / 12); // Calculate total pages
+        const defaultImageUrl = "https://via.placeholder.com/150";
 
         return (
-          <>
-
-          
-            <div style={{ textAlign: 'center' }}>
-                {this.state.loading && <Spinner/>}
-            </div>
-            <div className="container mt-5">
+          <div className="container mt-5">
+          <LoadingBar color="#f11946" progress={this.state.progress} onLoaderFinished={() => this.setProgress(0)}/>          
+          <InfiniteScroll
+                dataLength={this.state.articles.length}
+                next={this.fetchNextUsers}
+                hasMore={this.state.articles.length !== this.state.totalResults}
+                loader={<div style={{ textAlign: 'center' }}>{this.state.loading && <Spinner />}</div>}
+          >
               <div className="row">
-                {!this.state.loading && this.state.articles.map((article, index) => (
+                {this.state.articles.map((article, index) => (
                   <div className="col-md-4 mb-4" key={index}>
                     <NewsItem 
                       title={article.title.slice(0, 40) + "...."} 
                       description={article.description ? article.description.slice(0, 80) : "No description available."} 
-                      imageUrl={article.urlToImage || defaultImageUrl} // Use default image if not available
+                      imageUrl={article.urlToImage || defaultImageUrl}
                       url={article.url}
                       author={article.author}
                       date={article.publishedAt}
@@ -100,26 +100,8 @@ export default class News extends Component {
                   </div>
                 ))}
               </div>
-        
-              {/* Pagination buttons */}
-              <div className="d-flex justify-content-between w-100 mt-4">
-                <button 
-                  className="btn btn-secondary" 
-                  onClick={this.previousPage} 
-                  disabled={this.state.page === 1}
-                >
-                  Previous Page
-                </button>
-                <button 
-                  className="btn btn-secondary" 
-                  onClick={this.nextPage}
-                  disabled={this.state.page >= totalPages} // Disable if on last page
-                >
-                  Next Page
-                </button>
-              </div>
-            </div>        
-          </>
-        );        
+            </InfiniteScroll>
+          </div>
+        );
     }
 }

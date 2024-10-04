@@ -15,7 +15,7 @@ export default class NewsItem extends Component {
 
         return (
         <div className="container mt-5">
-            <div className="card" style={{ minWidth: '300px', height: "450px", overflow: "visible"}}>
+            <div className="card" style={{ minWidth: '200px', height: "450px", overflow: "visible"}}>
                 <img src={imageUrl} className="card-img-top" alt="Card image cap" style={{height: "200px", objectFit: "fit"}} />
                 <div className="card-body">
                     <h5 className="card-title">{title}</h5>
