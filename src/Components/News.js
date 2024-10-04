@@ -1,107 +1,95 @@
-import React, { Component } from 'react';
+import React, { useEffect, useState } from 'react';
 import NewsItem from './NewsItem';
 import Spinner from './Spinner';
 import PropTypes from "prop-types";
 import InfiniteScroll from "react-infinite-scroll-component";
 import LoadingBar from 'react-top-loading-bar';
 
-export default class News extends Component {
-    constructor() {
-        super();
-        this.state = {
-            articles: [],
-            loading: false,
-            page: 1,  // Start from page 1
-            totalResults: 0,
-            progress: 0
-        };
-    }
-
-    static defaultProps = {
-      country: "us",
-      pageSize: 12,
-      category: "technology"
-    };
-
-    static propTypes = {
-      country: PropTypes.string,
-      pageSize: PropTypes.number,
-      category: PropTypes.string
-    };
-
-    setProgress = (progress) => {
-      this.setState({ progress });
-    };  
-
-    fetchData = async () => {
-        this.setState({ loading: true });
-        document.title = this.props.category.charAt(0).toUpperCase() + this.props.category.slice(1) + " Headlines";
+const News = (props) =>  {
+   
+    const [articles, setArticles] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [page, setPage] = useState(1);
+    const [totalResults, setTotalResults] = useState(0); 
+    const [progress, setProgress] = useState(0);
+    
+    const fetchData = async () => {
+        setLoading(true);
+        document.title = props.category.charAt(0).toUpperCase() + props.category.slice(1) + " Headlines";
         try {
-            this.setProgress(30);
-            const response = await fetch(`https://newsapi.org/v2/top-headlines?country=${this.props.country}&category=${this.props.category}&pageSize=${this.props.pageSize}&page=${this.state.page}&apiKey=ceb31121f2bb48179582393dcf445475`);
+            setProgress(30);
+            const response = await fetch(`https://newsapi.org/v2/top-headlines?country=${props.country}&category=${props.category}&pageSize=${props.pageSize}&page=${page}&apiKey=ceb31121f2bb48179582393dcf445475`);
             const jsonData = await response.json();
-            this.setProgress(50);
-            // Append new articles to the existing ones
+            setProgress(50);
+
             if (jsonData.articles) {
-                this.setState({ 
-                    articles: this.state.articles.concat(jsonData.articles), 
-                    totalResults: jsonData.totalResults,
-                    loading: false 
-                });
-                this.setProgress(100);
+                setArticles(articles.concat(jsonData.articles)); 
+                setTotalResults(jsonData.totalResults);
+                setLoading(false); 
+                setProgress(100);
             } else {
-                this.setState({ 
-                    articles: [], 
-                    totalResults: 0,
-                    loading: false 
-                });
-                this.setProgress(100);
+                setArticles([]); 
+                setTotalResults(0);
+                setLoading(false);
+                setProgress(100);
             }
         } catch (error) {
             console.error("Error fetching data:", error);
-            this.setState({ loading: false });
-            this.setProgress(100);
+            setLoading(false);
+            setProgress(100);
         }
     };
 
-    fetchNextUsers = () => {
-        this.setState((prevState) => ({
-            page: prevState.page + 1
-        }), this.fetchData);
+    // Define the function correctly
+    const fetchNextUsers = () => {
+        setPage(page + 1);  // This will trigger a re-fetch in useEffect
     };
 
-    componentDidMount() {
-        this.fetchData();
-    }
+    useEffect(() => {
+        fetchData();
+        // Re-fetch data whenever the page changes
+    }, [page]);
 
-    render() {
-        const defaultImageUrl = "https://via.placeholder.com/150";
+    const defaultImageUrl = "https://via.placeholder.com/150";
 
-        return (
-          <div className="container mt-5">
-          <LoadingBar color="#f11946" progress={this.state.progress} onLoaderFinished={() => this.setProgress(0)}/>          
-          <InfiniteScroll
-                dataLength={this.state.articles.length}
-                next={this.fetchNextUsers}
-                hasMore={this.state.articles.length !== this.state.totalResults}
-                loader={<div style={{ textAlign: 'center' }}>{this.state.loading && <Spinner />}</div>}
-          >
-              <div className="row">
-                {this.state.articles.map((article, index) => (
-                  <div className="col-md-4 mb-4" key={index}>
-                    <NewsItem 
-                      title={article.title.slice(0, 40) + "...."} 
-                      description={article.description ? article.description.slice(0, 80) : "No description available."} 
-                      imageUrl={article.urlToImage || defaultImageUrl}
-                      url={article.url}
-                      author={article.author}
-                      date={article.publishedAt}
-                    />
-                  </div>
-                ))}
-              </div>
+    return (
+        <div className="container mt-5">
+            <LoadingBar color="#f11946" progress={progress} onLoaderFinished={() => setProgress(0)} />          
+            <InfiniteScroll
+                dataLength={articles.length}
+                next={fetchNextUsers}  // Correctly passing fetchNextUsers
+                hasMore={articles.length !== totalResults}
+                loader={<div style={{ textAlign: 'center' }}>{loading && <Spinner />}</div>}
+            >
+                <div className="row">
+                    {articles.map((article, index) => (
+                        <div className="col-md-4 mb-4" key={index}>
+                            <NewsItem 
+                                title={article.title.slice(0, 40) + "...."} 
+                                description={article.description ? article.description.slice(0, 80) : "No description available."} 
+                                imageUrl={article.urlToImage || defaultImageUrl}
+                                url={article.url}
+                                author={article.author}
+                                date={article.publishedAt}
+                            />
+                        </div>
+                    ))}
+                </div>
             </InfiniteScroll>
-          </div>
-        );
-    }
+        </div>
+    );
 }
+
+News.defaultProps = {
+    country: "us",
+    pageSize: 12,
+    category: "technology"
+}
+
+News.propTypes = {
+    country: PropTypes.string,
+    pageSize: PropTypes.number,
+    category: PropTypes.string
+};
+
+export default News;

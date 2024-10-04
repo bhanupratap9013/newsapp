@@ -1,13 +1,8 @@
 import React, { Component } from 'react';
 
-export default class NewsItem extends Component {
-    constructor(){
-        super();
-        console.log("This is the console log value");
-    }
-
-    render() {
-        let {title,description, imageUrl, url, author, date} = this.props;
+const NewsItem = (props) =>{
+   
+    let {title,description, imageUrl, url, author, date} = this.props;
         
         const dateString = date;
         const dateActual = new Date(dateString);
@@ -30,5 +25,8 @@ export default class NewsItem extends Component {
             </div>
         </div>
         );
-    }
-}   
+}
+
+
+export default NewsItem
+
